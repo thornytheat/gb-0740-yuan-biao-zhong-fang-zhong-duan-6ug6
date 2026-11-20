@@ -2,5 +2,8 @@
 {% from 'lines.jinja' import panel %}
 {% block section %}
 {{ panel('批次凭据',[meta]) }}
+{% if evidence %}<section class="panel trailer"><h2>原批证据</h2>
+  <div id="evidence">{% if evidence['在位'] and evidence['摘要一致'] %}在位，摘要与签发一致{% elif evidence['在位'] %}在位，但摘要与签发不符{% else %}缺失，无法回查{% endif %}</div>
+</section>{% endif %}
 <section class="panel output"><h2>近期计划</h2><ul class="versions">{% for item in latest %}<li><a href="{{ url_for('console',section='release',plan=item['编号']) }}">{{ item['编号'] }}</a> · {{ item['截止分区日'] }}</li>{% endfor %}</ul></section>
 {% endblock %}

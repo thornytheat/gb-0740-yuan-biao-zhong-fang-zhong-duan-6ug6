@@ -1,7 +1,7 @@
 # 深度登记 源表重放终端
 
 - 规模：中型
-- 核心规则：先扩展受影响的分区与跨日依赖，再生成写入计划，验证每个目标指针并演练原样回滚。
+- 核心规则：先扩展受影响的分区与跨日依赖，再生成写入计划，验证每个目标指针并演练原样回滚。夜间容量只够一部分时，按排程顺序把依赖就绪且容量够的分区收敛进当晚承诺，其余连同其下游一起推迟。
 
 ## 功能模块
 
@@ -14,6 +14,7 @@
 | M5 回滚校验 | 核对写入前后与恢复哈希 | `GET /api/rollback/{id}` | `app/modules/m5_rollback/service.py` | `tests/test_rollback.py` |
 | M6 行数勾稽 | 守恒比较影响分区、源记录和行数 | `GET /api/reconcile/{id}` | `app/modules/m6_reconcile/service.py` | `tests/test_reconcile.py` |
 | M7 版本签发 | 在近期计划中复用并下载清单 | `GET /api/release/{id}` | `app/modules/m7_release/service.py` | `tests/test_release.py` |
+| M8 回填承诺 | 按容量收敛今晚承诺与推迟范围 | `GET /api/commitment/{id}` | `app/modules/m8_commitment/service.py` | `tests/test_commitment.py` |
 
 ## 陷阱登记
 
@@ -29,7 +30,10 @@
 | TRAP-20 | clean.json 添加回边 | 排序丢结点或死循环 | 深度优先检测访问栈 | `app/modules/m2_graph/service.py` | `tests/test_graph.py::test_cycle_path_from_sample` |
 | TRAP-23 | nightly.json 截点紧邻滞后一日 | 越界写入 | 分区日显式切界 | `app/modules/m4_schedule/expansion.py` | `tests/test_schedule.py::test_cutoff_included_but_lagged_next_day_excluded` |
 | TRAP-26 | 演练前计划引用旧指针 | 覆盖新版本 | 检查所有写入前置值 | `app/modules/m5_rollback/service.py` | `tests/test_rollback.py::test_stale_snapshot_atomic` |
+| TRAP-27 | 只挑行数小的先做 | 依赖未齐的下游被提前发布 | 按排程顺序一趟收敛，上游未承诺的下游记 WAITING_UPSTREAM 一起等待 | `app/modules/m8_commitment/service.py` | `tests/test_commitment.py::test_downstream_waits_with_deferred_upstream` |
+| TRAP-28 | 同日迟到修订或容量调整 | 覆盖已签发承诺 | 容量与原始字节共同寻址，只插不改，修订生成新承诺 | `app/modules/m7_release/service.py` | `tests/test_commitment.py::test_retry_reuses_and_late_revision_appends` |
+| TRAP-29 | 只存计算结果不留原批 | 误删后无法回查 | 原批字节随批次只增不删，签发页核验在位与摘要 | `app/modules/m7_release/store.py` | `tests/test_commitment.py::test_evidence_kept_with_batch` |
 
 ## 已知边界
 
-清单约定按日分区、拼接型节点、离线镜像演练。读源快照与分区日的证据随签发清单输出。
+清单约定按日分区、拼接型节点、离线镜像演练。读源快照与分区日的证据随签发清单输出。承诺选择是确定性的排程序一趟贪心，不做全局最优装箱；回滚演练只覆盖当晚承诺写入的分区。

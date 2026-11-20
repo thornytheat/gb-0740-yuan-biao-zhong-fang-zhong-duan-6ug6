@@ -35,3 +35,10 @@ def nonnegative_count(value):
     if number > 9_007_199_254_740_991:
         raise ValueError("行数超过单分区限制")
     return number
+
+
+def budget(value):
+    try:
+        return nonnegative_count(value)
+    except ValueError:
+        raise ReplayError("CAPACITY", "夜间容量须为非负整数行数") from None

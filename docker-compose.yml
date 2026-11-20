@@ -5,6 +5,7 @@ services:
       - "127.0.0.1:${APP_PORT:-18429}:8000"
     environment:
       REPLAY_DB: /state/replay.sqlite3
+      REPLAY_CAPACITY: ${REPLAY_CAPACITY:-1500}
     volumes:
       - replay-data:/state
     healthcheck:

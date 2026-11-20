@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block section %}
+{% set promise = data.get('承诺') %}
+{% if promise %}
+<section class="panel checksum"><h2>$ replay commit <small>容量受限 · 可交接</small></h2>
+  <dl>
+    <div><dt>夜间容量</dt><dd>{{ promise['容量'] }} 行</dd></div>
+    <div><dt>今晚承诺</dt><dd>{{ promise['已用'] }} 行 · {{ promise['写入']|length }} 个分区</dd></div>
+    <div><dt>剩余容量</dt><dd id="remaining">{{ promise['剩余'] }} 行</dd></div>
+    <div><dt>承诺摘要</dt><dd>{{ promise['承诺摘要'] }}</dd></div>
+  </dl>
+</section>
+<section class="panel stream"><h2>今晚实际能承诺 <small>{{ promise['写入']|length }} 个分区</small></h2>
+  <div class="scroll" tabindex="0" aria-label="承诺写入">
+    {% for item in promise['写入'] %}<details {% if loop.index<=2 %}open{% endif %}>
+      <summary><span class="state" data-state="commit">+ 今晚</span><span>{{ item['分区'] }}</span><span class="count">{{ item['行数'] }} 行</span></summary>
+    </details>{% else %}<p class="empty">今晚容量不覆盖任何分区。</p>{% endfor %}
+  </div>
+</section>
+<section class="panel stream"><h2>推迟范围 <small>{{ promise['推迟']|length }} 个分区随夜等待</small></h2>
+  <div class="scroll" tabindex="0" aria-label="推迟范围">
+    {% for item in promise['推迟'] %}<details {% if loop.index<=2 %}open{% endif %}>
+      <summary><span class="state" data-state="{{ 'blocked' if item['原因码'] in ['STALE_HEAD','MISSING_INPUT'] else 'defer' }}">{{ {'CAPACITY':'↷ 容量不足','WAITING_UPSTREAM':'↷ 等待上游','STALE_HEAD':'! 指针陈旧','MISSING_INPUT':'! 输入缺失'}[item['原因码']] }}</span><span>{{ item['分区'] }}</span>{% if item['等待'] %}<span class="count">等待 {{ item['等待']|join('、') }}</span>{% endif %}</summary>
+    </details>{% else %}<p class="empty">没有分区被推迟。</p>{% endfor %}
+  </div>
+</section>
+{% else %}<section class="panel"><p class="empty">该批次早于容量承诺规则，没有承诺内容。</p></section>
+{% endif %}
+{% endblock %}

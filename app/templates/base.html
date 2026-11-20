@@ -20,6 +20,7 @@
       <section class="panel command"><h2>$ replay plan</h2><form action="/api/plans" method="post" enctype="multipart/form-data" id="planner">
         <input type="hidden" name="section" value="{{ active }}">
         <label>输入清单<select name="sample">{% for key,label in inputs.items() %}<option value="{{ key }}" {% if key==sample %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>夜间容量<input type="text" name="capacity" inputmode="numeric" placeholder="行数，留空按 {{ capacity_default }}"></label>
         <label>上传快照<input type="file" name="bundle" accept=".json,application/json"></label>
         <button type="submit">生成重放计划</button>
         <output id="result" role="status">{% if reused %}已复用计划{% endif %}</output>

@@ -1,9 +1,9 @@
 import os
 
-from app.config import MAX_BYTES, ROOT, SAMPLES, VERSION
-from app.keys import ReplayError
+from app.config import CAPACITY, MAX_BYTES, ROOT, SAMPLES, VERSION
+from app.keys import ReplayError, budget
 from app.modules import VIEWS, register
-from app.modules.m7_release.service import execute
+from app.modules.m7_release.service import attest, execute
 from app.modules.m7_release.store import Catalog
 from app.web import fixture, record, repository
 from flask import Flask, abort, jsonify, render_template, request, url_for
@@ -58,6 +58,8 @@ def create_app(options=None):
             tasks=rows,
             filter_state=state,
             latest=repository().latest() if section == "release" else [],
+            evidence=attest(repository(), result["批次"]["编号"]) if section == "release" else None,
+            capacity_default=CAPACITY,
         )
 
     @app.get("/api/plans")
@@ -75,13 +77,16 @@ def create_app(options=None):
         sample = args.get("sample", "nightly")
         source = request.files.get("bundle")
         raw = source.read(MAX_BYTES + 1) if source and source.filename else fixture(sample)
-        result, reused = execute(repository(), raw)
+        offered = args.get("capacity")
+        capacity = None if offered in (None, "") else budget(offered)
+        result, reused = execute(repository(), raw, capacity)
         key = result["批次"]["编号"]
         return jsonify(
             id=key,
             reused=reused,
             summary=result["分区勾稽"],
             rollback=result["回滚"],
+            commitment=result.get("承诺"),
             next=url_for(
                 "console", section=section, plan=key, sample=sample, reused="yes" if reused else None
             ),
